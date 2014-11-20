@@ -1,5 +1,5 @@
 %% Load House info
-path2proj = 'C:\Users\ok1011\Documents\SDC';
+path2proj = fullfile(getenv('homepath'), 'Documents','github','SDC');
 hprices = importHouseprices(path2proj);
 hmeta   = importHousemeta(path2proj);
 %%
@@ -25,6 +25,8 @@ isample = randsample(npoints, ceil(0.1*npoints));
 s       = line(hprices.Oseast1M(isample)/100, hprices.Osnrth1M(isample)/100,...
                'LineStyle','none','Marker','o', 'MarkerFaceColor',lines(1),...
                'MarkerEdgeColor','none','MarkerSize',1.5);
+s       = scatter(hprices.Oseast1M(isample)/100, hprices.Osnrth1M(isample)/100,4, log(double(hprices.Price(isample)/100)),'o','filled');
+colormap('jet')           
 
 % Add constituency boundaries
 constboundaries = '.\data\bdline_essh_gb\Data\westminster_const_region.shp';
@@ -60,7 +62,7 @@ mapshow(Spart,'FaceColor','None','EdgeColor','k','LineWidth',1.5)
 mapshow(S,'FaceColor','None','EdgeColor','g','LineWidth',1.5)
 
 % 
-% constboundaries = '.\data\bdline_essh_gb\Data\westminster_const_region.shp';
+% constboundaries = '.\data\bdline_essh_gb\Data\parish_region.shp';
 % info = shapeinfo(constboundaries);
 % S    = shaperead(constboundaries,'boundingbox',bbox*100);
 % for ii = 1:numel(S)
@@ -68,4 +70,5 @@ mapshow(S,'FaceColor','None','EdgeColor','g','LineWidth',1.5)
 %     S(ii).Y = S(ii).Y/100;
 % end
 % mapshow(S,'FaceColor','None','EdgeColor','g','LineWidth',2)
+% mapshow(S(strcmpi({S.AREA_CODE},'CPC'),:),'FaceColor','None','EdgeColor','k','LineWidth',1.5)
 
