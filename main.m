@@ -2,6 +2,8 @@ function [h,s] = main
 
 %% GUI frame
 h = GUIframe();
+h.Spinner.start;
+drawnow
 %% Load stuff
 path2proj = fullfile(getenv('USERPROFILE'), 'Documents','github','SDC');
 s.hprices = importHouseprices(path2proj);
@@ -43,6 +45,19 @@ s.arearank             = zeros(size(idx));
 [~,~,s.arearank(idx,1)] = histcounts(s.area(idx), prctile(s.area(idx),0:100));
 s.arearank(idx)         = 101-s.arearank(idx);
 
+% Trend
+t       = datenum(s.hprices.Trdate) - min(datenum(s.hprices.Trdate))+1;
+Eab     = accumarray(s.tilenum, t.*double(s.hprices.Price),[],@mean);
+Ea      = accumarray(s.tilenum, t,[],@mean); 
+Eb      = accumarray(s.tilenum, double(s.hprices.Price),[],@mean);
+s.trend = (Eab-Ea.*Eb)./accumarray(s.tilenum, t.^2,[],@mean);
+s.trend(isnan(s.trend)) = 0;
+% Trend rank
+idx                      = s.trend ~= 0; 
+s.trendrank              = zeros(size(idx));
+[~,~,s.trendrank(idx,1)] = histcounts(s.trend(idx), prctile(s.trend(idx),0:100));
+s.trendrank(idx)         = 101-s.trendrank(idx);
+
 %% Plot
 
 % Backdrop image
@@ -70,14 +85,17 @@ h.Circle = plot(circ(:,1),circ(:,2),'-r','Visible','off');
 
 % Boundaries and tiles
 [h,s.idrop,s.ipart] = plotBoundaries(s.bnd,'cdata',s.avg,'handles',h);
-s.tileid = cell2mat(get(h.Tiles.Children,'UserData'));
+s.Tileid = cell2mat(get(h.Tiles.Children,'UserData'));
 set(h.Boundaries,'Color',[0.5,0.5,0.5]);
 set(h.Excluded  ,'Color',[0.15,0.15,0.15]);
-h.Previoustile = h.Tiles.Children(1);
+h.Previoustile = [];
 
 % Postcode scatter
 h.PostcodeMarker = scatter(0,0,50,'red','+');
 
+% Number formatting
+dn    = java.text.DecimalFormat;
+s.fmt = @(x) char(dn.format(round(x)));
 %% Set callbacks
 
 % Layer checkboxes
@@ -95,8 +113,13 @@ for ii = 1:numel(child)
     set(child(ii),'ButtonDownFcn',@clickOnTile);
 end
 
+% Postcode lookup
 set(h.PostcodeEdit,'KeyPressFcn',@postcodeLookup)
 drawnow
+
+% Refresh spinner
+h.Spinner.stop;
+set(h.Spinnercomp,'Visible','off');
 %% Callbacks
     
     function toggleLayer(obj,~)
@@ -135,7 +158,8 @@ drawnow
                 s.pname = 'area';
                 cdata(~s.idrop,:) = indexcdata(s.area(~s.idrop));
             case 'trend'
-                
+                s.pname = 'trend';
+                cdata(~s.idrop,:) = indexcdata(s.trend(~s.idrop));
         end
         for jj = 1:ntiles
             set(tiles(jj,:), 'FaceColor', cdata(s.Tileid(jj),:))
@@ -145,20 +169,19 @@ drawnow
     end
     
     function clickOnTile(obj,~)
-        persistent dn
-        dn = java.text.DecimalFormat;
-        id = obj.UserData;
-        f  = @(x) char(dn.format(round(x)));
-        hh = h.Tilesinfopanel.BodyName;   set(hh, 'string',sprintf('%s%s', hh.Tag, s.bnd.NAME{id}))
-        hh = h.Tilesinfopanel.BodyCode;   set(hh, 'string',sprintf('%s%s', hh.Tag, s.bnd.CODE{id}))
-        hh = h.Tilesinfopanel.BodyArea;   set(hh, 'string',sprintf('%s%s', hh.Tag, f(s.bnd.HECTARES(id))))
-        hh = h.Tilesinfopanel.BodyNdeals; set(hh, 'string',sprintf('%s%s', hh.Tag, f(s.count(id))))
-        hh = h.Tilesinfopanel.BodyPrice;  set(hh, 'string',sprintf('%s%s', hh.Tag, f(s.(s.pname)(id))))
-        hh = h.Tilesinfopanel.BodyRank;   set(hh, 'string',sprintf('%s%d', hh.Tag, s.([s.pname 'rank'])(id)))
-        set(h.Previoustile,'EdgeColor','none')
-        set(obj,'EdgeColor','red')
-        h.Previoustile = obj;
-        drawnow
+        if ~isempty(obj)
+            id = obj.UserData;
+            hh = h.Tilesinfopanel.BodyName;   set(hh, 'string',sprintf('%s%s', hh.Tag, s.bnd.NAME{id}))
+            hh = h.Tilesinfopanel.BodyCode;   set(hh, 'string',sprintf('%s%s', hh.Tag, s.bnd.CODE{id}))
+            hh = h.Tilesinfopanel.BodyArea;   set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(s.bnd.HECTARES(id))))
+            hh = h.Tilesinfopanel.BodyNdeals; set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(s.count(id))))
+            hh = h.Tilesinfopanel.BodyPrice;  set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(s.(s.pname)(id))))
+            hh = h.Tilesinfopanel.BodyRank;   set(hh, 'string',sprintf('%s%d', hh.Tag, s.([s.pname 'rank'])(id)))
+            set(h.Previoustile,'EdgeColor','none')
+            set(obj,'EdgeColor','red')
+            h.Previoustile = obj;
+            drawnow
+        end
     end
     
     function postcodeLookup(obj,evt)
@@ -171,27 +194,50 @@ drawnow
             % Invalid
             if len > 8 || len < 6 
                 textcolor = 'red';
+                stats     = 'invalid';
             else
                 imatch = all(bsxfun(@eq, s.hprices.Postcode(:,1:len), pattern),2);
                 n      = nnz(imatch);
                 if n > 0
                     textcolor = 'green';
-                    xy = [s.hprices.Oseast1M(imatch)/100,s.hprices.Osnrth1M(imatch)/100];
+                    xy        = [s.hprices.Oseast1M(imatch)/100,s.hprices.Osnrth1M(imatch)/100];
+                    stats     = s.hprices(imatch,:);
+                    tile      = h.Tiles.Children(unique(s.tilenum(imatch))-1 == s.Tileid);
+                    if ~isempty(tile)
+                        clickOnTile(tile);
+                    end
+                    
                 % Not found
                 else
                     textcolor = 'red';
-                end
-                tile = h.Tiles.Children(unique(s.tilenum(imatch))-1 == s.tileid);
-                if ~isempty(tile)
-                    clickOnTile(tile)
+                    stats     = 'not found';
                 end
             end
-            
             set(h.PostcodeMarker,'XData',xy(1,1),'YData',xy(1,2))
             set(obj,'ForegroundColor',textcolor);
+            updatePcodeinfo(stats);
         elseif any(obj.ForegroundColor ~= 0.2)
             obj.ForegroundColor = repmat(0.2, 1, 3);
         end
         drawnow
+    end
+    function updatePcodeinfo(stats)
+        if any(strcmpi(stats,{'invalid','not found'}))
+            hh = h.Pcodeinfopanel.BodyPcode; set(hh, 'string',sprintf('%s%s', hh.Tag, stats))
+            hh = h.Pcodeinfopanel.BodyBetween; set(hh, 'string',sprintf('%s', ''))
+            hh = h.Pcodeinfopanel.BodyNdeals;  set(hh, 'string',sprintf('%s', ''))
+            hh = h.Pcodeinfopanel.BodyPerfree; set(hh, 'string',sprintf('%s', ''))
+            hh = h.Pcodeinfopanel.BodyPernew;  set(hh, 'string',sprintf('%s', ''))
+            hh = h.Pcodeinfopanel.BodyPrice;   set(hh, 'string',sprintf('%s', ''))
+        else
+            stats.Trdate.Format = 'MMM yy';
+            dtrange = [char(min(stats.Trdate)), ' - ', char(max(stats.Trdate))];
+            hh = h.Pcodeinfopanel.BodyPcode;   set(hh, 'string',sprintf('%s%s', hh.Tag, stats.Postcode(1,:)))
+            hh = h.Pcodeinfopanel.BodyBetween; set(hh, 'string',sprintf('%s%s', hh.Tag, dtrange))
+            hh = h.Pcodeinfopanel.BodyNdeals;  set(hh, 'string',sprintf('%s%d', hh.Tag, size(stats,1)))
+            hh = h.Pcodeinfopanel.BodyPerfree; set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(mean(stats.Freeorlease)*100)))
+            hh = h.Pcodeinfopanel.BodyPernew;  set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(mean(stats.Newbuild)*100)))
+            hh = h.Pcodeinfopanel.BodyPrice;   set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(mean(double(stats.Price)))))
+        end
     end
 end
