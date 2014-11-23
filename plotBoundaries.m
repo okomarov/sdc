@@ -1,21 +1,23 @@
-function varargout = plotBoundaries(Bnd, varargin)
+function [h,idrop, ipart] = plotBoundaries(Bnd, varargin)
 
 % Parse optional inputs with defaults
 persistent ip
 if isempty(ip)
     ip = inputParser;
     ip.FunctionName = mfilename;
-    ip.addOptional('center',[5296.12,1806.25]                ,@(x) isnumeric(x) && numel(x)== 2);
-    ip.addOptional('radius',1000                             ,@(x) isnumeric(x) && isscalar(x));
-    ip.addOptional('theta' ,(0:0.01:2*pi)'                   ,@(x) isnumeric(x) && isvector(x));
-    ip.addOptional('circ'  ,[]                               ,@isnumeric);
-    ip.addOptional('cdata' ,[]                               ,@isnumeric);
+    ip.addOptional('center' ,[5296.12,1806.25]                ,@(x) isnumeric(x) && numel(x)== 2);
+    ip.addOptional('radius' ,1000                             ,@(x) isnumeric(x) && isscalar(x));
+    ip.addOptional('theta'  ,(0:0.01:2*pi)'                   ,@(x) isnumeric(x) && isvector(x));
+    ip.addOptional('circ'   ,[]                               ,@isnumeric);
+    ip.addOptional('cdata'  ,[]                               ,@isnumeric);
+    ip.addOptional('handles',[]                               ,@isstruct);
 end
 parse(ip,varargin{:})
 center = ip.Results.center;
 radius = ip.Results.radius;
 theta  = ip.Results.theta;
 cdata  = ip.Results.cdata;
+h      = ip.Results.handles;
 % Exclude if outside and grey out if partially filled, i.e. intersecting
 if isempty(ip.Results.circ)
     circ = [center(1) + radius.*cos(theta), center(2) + radius.*sin(theta)];
@@ -46,56 +48,36 @@ iempty = ~inpolygon(pop(:,1),pop(:,2), circ(:,1),circ(:,2));
 idrop  = iempty | ipart;
 
 % Plot
-h.filled  = plotHelper(bndx,bndy,cdata,~idrop);
-h.partial = plotHelper(bndx,bndy,[]   , ipart);
-
-if nargout == 1
-    varargout{1} = h; 
-end
+[h.Boundaries,h.Tiles] = plotHelper(bndx,bndy,cdata,~idrop);
+h.Excluded             = plotHelper(bndx,bndy,[]   , ipart);
 end
 
-function h = plotHelper(bndx,bndy, cdata, idx)
+function [hbound,htiles] = plotHelper(bndx, bndy, cdata, idx)
 
 % number of patches
-bndx = bndx(idx);
-bndy = bndy(idx);
-npatches = nnz(idx);
-if npatches < 1
-    h = NaN;
-    return
-end
-
-% CData
-if ~isempty(cdata)
-    cdata           = cdata(idx);
-    isdata          = cdata ~= 0;
-    cmap            = flipud(jet(15));
-    edges           = prctile(cdata(isdata), [0,1,5,10:10:90, 95,99,100]);
-    %     minval = min(cdata(isdata));
-    %     edges = linspace(minval, max(cdata),size(cmap,1)+1);
-    [counts,a,bin]  = histcounts(cdata(isdata), edges);
-    cdata           = zeros(npatches,3);
-    cdata(isdata,:) = cmap(bin,:);
-end
+id       = uint16(find(idx));
+npatches = numel(id);
+bndx     = bndx(idx);
+bndy     = bndy(idx);
 
 % Plot contour line
-x = cell2mat(bndx');
-y = cell2mat(bndy');
-h = line(x,y,'LineWidth',1,'Visible','off');
-if isempty(cdata)
-    set(h,'Visible','on')
-else
-    h(2) = hggroup('Tag','colored','Visible','off');
+x      = cell2mat(bndx');
+y      = cell2mat(bndy');
+hbound = line(x,y,'LineWidth',1,'Visible','off');
+
+% Plot tile with CData
+if ~isempty(cdata)
+    cdata           = cdata(idx);
+    [cdata, isdata] = indexcdata(cdata);
+    htiles = hggroup('Tag','colored','Visible','off');
     for ii = 1:npatches
         if isdata(ii)
             x = bndx{ii}(1:end-1);
             y = bndy{ii}(1:end-1);
-            patch(x,y,ones(1,numel(x)),'Parent',h(2),...
-                  'FaceColor',cdata(ii,:),'FaceAlpha',0.5,'EdgeColor','none');
+            patch(x,y,ones(1,numel(x)),'Parent',htiles,...
+                  'FaceColor',cdata(ii,:),'FaceAlpha',0.5,'EdgeColor','none','UserData',id(ii));
         end
     end
-    drawnow
-    set(h(2),'Visible','on')
 end
 end
 
