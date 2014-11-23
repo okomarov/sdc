@@ -5,7 +5,11 @@ h = GUIframe();
 h.Spinner.start
 drawnow
 %% Load stuff
-s.path2proj = fullfile(getenv('USERPROFILE'), 'Documents','github','SDC');
+s.path2proj = fileparts(mfilename('fullpath'));
+datadir = fullfile(s.path2proj,'data');
+if ~exist(fullfile(datadir,'hprices.mat'),'file')
+    unzip(fullfile(datadir,'data.zip'),datadir)
+end
 s.hprices = importHouseprices(s.path2proj);
 s.hmeta   = importHousemeta(s.path2proj);
 s.bnd     = importBoundaries('district_borough_unitary_ward_region.shp');
