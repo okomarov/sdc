@@ -1,5 +1,4 @@
 function [h,s] = GUIframe(s)
-close
 %% GUI params
 s.bdratio  = 1886/1991;
 s.figwidth = 1100;
@@ -10,7 +9,7 @@ s.panelLineColor = repmat(0.75, 1,3);
 s.backgcolor     = repmat(0.95, 1,3);
 s.fontcolor      = repmat(0.2, 1,3);
 %% Figure
-h.Figure = figure('GraphicsSmoothing', 'off', 'Resize','off','Name','Price explorer',...
+h.Figure = figure('GraphicsSmoothing', 'on', 'Resize','off','Name','Price explorer',...
     'MenuBar','None','Toolbar','none','NumberTitle','off','Color',s.backgcolor,...
     'Position',[400 ,100, s.figwidth, 790]);
 %% Axis
