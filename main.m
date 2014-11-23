@@ -5,16 +5,14 @@ h = GUIframe();
 h.Spinner.start;
 drawnow
 %% Load stuff
-path2proj = fullfile(getenv('USERPROFILE'), 'Documents','github','SDC');
-s.hprices = importHouseprices(path2proj);
-s.hmeta   = importHousemeta(path2proj);
+s.path2proj = fullfile(getenv('USERPROFILE'), 'Documents','github','SDC');
+s.hprices = importHouseprices(s.path2proj);
+s.hmeta   = importHousemeta(s.path2proj);
 s.bnd     = importBoundaries('district_borough_unitary_ward_region.shp');
 % BoundingBox (1u = 1m)
 s.bbox = double([min(s.hprices.Oseast1M), min(s.hprices.Osnrth1M); max(s.hprices.Oseast1M), max(s.hprices.Osnrth1M)])/100;
 % Read backdrop raster image (1px = 100m)
-rastermap  = fullfile(path2proj, 'data','minisc_gb','data','RGB_TIF_compressed','MiniScale_(relief1)_R16.tif');
-info       = imfinfo(rastermap);
-s.backdrop = imread(rastermap, 'PixelRegion',{info.Height-[s.bbox(2,2) s.bbox(1,2)],s.bbox(1:2,1)});
+s = importBackdrop(s);
 %% Analysis
 % Build boundary subs
 [ip2m, price2meta] = mapPostcode(s.hprices.Postcode, s.hmeta.Pcd, s.hmeta.Pcd2);
