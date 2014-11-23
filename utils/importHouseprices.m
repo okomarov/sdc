@@ -40,6 +40,9 @@ catch
     hprices.Newbuild    = hprices.Newbuild == 'N';
     hprices.Postcode    = char(hprices.Postcode);
     
+    % Drop variables
+    hprices(:,{'Oa11','Latitude','Longitude'}) = [];
+    
     % Save
     save(fullfile(path2proj, 'data', 'hprices'),'hprices','-v7.3')
 end

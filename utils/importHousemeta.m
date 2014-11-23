@@ -35,6 +35,8 @@ catch
         '2011 Census output area (GB)/ small area (NI)','2011 Census rural-urban classification',...
         '2011 Census workplace zone','','',''};
     
+    % Drop variables
+    hmeta(:,{'Dointr','Doterm','Usertype','Cty','Laua','Hlthau','Ctry','Lsoa11','Msoa11','Oa11','Ru11Ind','Wz11','Latitude','Longitude'}) = [];
     
     % Save
     save(fullfile(path2proj, 'data', 'hmeta'),'hmeta','-v7.3')
