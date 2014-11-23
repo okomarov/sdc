@@ -1,4 +1,4 @@
-function [h,s] = main
+function main
 addpath('utils')
 %% GUI frame
 h = GUIframe();
