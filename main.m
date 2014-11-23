@@ -2,7 +2,7 @@ function [h,s] = main
 
 %% GUI frame
 h = GUIframe();
-h.Spinner.start;
+h.Spinner.start
 drawnow
 %% Load stuff
 s.path2proj = fullfile(getenv('USERPROFILE'), 'Documents','github','SDC');
@@ -116,8 +116,7 @@ set(h.PostcodeEdit,'KeyPressFcn',@postcodeLookup)
 drawnow
 
 % Refresh spinner
-h.Spinner.stop;
-set(h.Spinnercomp,'Visible','off');
+toggleSpinner(h.Spinner)
 %% Callbacks
     
     function toggleLayer(obj,~)
@@ -145,6 +144,8 @@ set(h.Spinnercomp,'Visible','off');
     end
 
     function selectTilesType(obj,~)
+        toggleSpinner(h.Spinner)
+        drawnow
         tiles  = h.Tiles.Children;
         ntiles = numel(tiles);
         cdata  = zeros(size(s.idrop,1),3);
@@ -164,6 +165,7 @@ set(h.Spinnercomp,'Visible','off');
         end
         clickOnTile(h.Previoustile)
         drawnow
+        toggleSpinner(h.Spinner)
     end
     
     function clickOnTile(obj,~)
@@ -236,6 +238,17 @@ set(h.Spinnercomp,'Visible','off');
             hh = h.Pcodeinfopanel.BodyPerfree; set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(mean(stats.Freeorlease)*100)))
             hh = h.Pcodeinfopanel.BodyPernew;  set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(mean(stats.Newbuild)*100)))
             hh = h.Pcodeinfopanel.BodyPrice;   set(hh, 'string',sprintf('%s%s', hh.Tag, s.fmt(mean(double(stats.Price)))))
+        end
+    end
+
+    function toggleSpinner(obj,~)
+        switch h.Spinnercomp.Visible
+            case 'on'
+                obj.stop;
+                set(h.Spinnercomp,'Visible','off');
+            case 'off'
+                obj.start
+                set(h.Spinnercomp,'Visible','on');
         end
     end
 end
