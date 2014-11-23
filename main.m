@@ -1,5 +1,5 @@
 function [h,s] = main
-
+addpath('utils')
 %% GUI frame
 h = GUIframe();
 h.Spinner.start
