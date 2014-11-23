@@ -52,7 +52,8 @@ t       = datenum(s.hprices.Trdate) - min(datenum(s.hprices.Trdate))+1;
 Eab     = accumarray(s.tilenum, t.*double(s.hprices.Price),[],@mean);
 Ea      = accumarray(s.tilenum, t,[],@mean); 
 Eb      = accumarray(s.tilenum, double(s.hprices.Price),[],@mean);
-s.trend = (Eab-Ea.*Eb)./accumarray(s.tilenum, t.^2,[],@mean);
+tmp     = (Eab-Ea.*Eb)./accumarray(s.tilenum, t.^2,[],@mean);
+s.trend = tmp(2:end);
 s.trend(isnan(s.trend)) = 0;
 % Trend rank
 idx                      = s.trend ~= 0; 
